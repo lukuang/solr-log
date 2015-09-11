@@ -18,8 +18,11 @@ for p in paths:
             all_files[a_file] = []
         all_files[a_file].append(os.path.join(p,a_file))
 
+out_f = open(dest_name,"w")
 for a_file in sorted(all_files.keys() ):
     print a_file
     for path in all_files[a_file]:
-        print "\t",path
-    print "-"*20
+        with open(path) as f:
+            file_text = f.read()
+            dest_name.write(file_text)
+            #raw_input("Press Enter to Continue!")
