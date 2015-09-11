@@ -20,9 +20,9 @@ for p in paths:
 
 out_f = open(dest_name,"w")
 for a_file in sorted(all_files.keys() ):
-    print a_file
+    #print a_file
     for path in all_files[a_file]:
         with open(path) as f:
             file_text = f.read()
-            dest_name.write(file_text)
+            out_f.write(file_text)
             #raw_input("Press Enter to Continue!")
