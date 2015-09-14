@@ -10,6 +10,9 @@ import argparse
 def read_log(log_file):
     with open(log_file) as f:
         for line in f:
+            if "/solr/collection1/browse" not in line:
+                #print "skip line",line
+                continue
             m = re.search("^(.+?)\s+-\s+-\s+\[(.+?)\] \"(.+?)\"",line)
             if m is not None:
                 ip,complex_time, action = m.group(1),m.group(2),m.group(3)
@@ -24,7 +27,7 @@ def read_log(log_file):
                 else:
                     print "error time format"
                     print line
-                raw_input("press enter to continue")
+                #raw_input("press enter to continue")
             else:
                 print "error line!"
                 print line
