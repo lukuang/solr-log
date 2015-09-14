@@ -14,10 +14,10 @@ def read_log(log_file, session_threshold):
             if "/solr/collection1/browse" not in line:
                 #print "skip line",line
                 continue
-            m = re.search("^(.+?)\s+-\s+-\s+\[(.+?)\] \"(.+?)\"",line)
+            m = re.search("^(.+?)\s+-\s+-\s+\[(.+?)\] \"(.+?) HTTP/1.1\"",line)
             if m is not None:
                 ip,complex_time, url = m.group(1),m.group(2),m.group(3)
-
+                url = urllib.unquote(url)
                 #get time of each query
                 t= 0
                 mt = re.match("^(.+)\s(\+|\-)(\d{2})(\d{2})$", complex_time)
@@ -34,37 +34,37 @@ def read_log(log_file, session_threshold):
                     print line
 
                 #get query and possible docid, relevance judgement
-                mq = re.search("browse/?\?\&?q\=([^\& ]+)",url)
-                #paras = urlparse.urlsplit(url)
-                #skip query without a valid query string
-                if mq is None or mq.group(1) is None:
-                    #print "skip no query actions"
-                    #print line
-                    #raw_input("press enter to continue")
-                    continue
-                q_filed = mq.group(1)
-                query_string = ""
-                mqs = re.search("^Id:\d+\+?$", q_filed)
 
-                #skip only doc id query
-                if mqs is not None:
-                    # print "skip only doc id query"
-                    # print q_filed
-                    # print line
-                    continue
-                mqs = re.search("(Id:(\d+)\+?)?(\S+)",q_filed)
-                if mqs is not None:
-                    query_string = urllib.unquote( mqs.group(3) )
-                    if mqs.group(1) is not None:
-                        if "mlt=true" in line:
-                            print "a click"
-                            print "doc id", mqs.group(2)
-                        elif("relevent=" in line):
+                paras = urlparse.parse_qs(urlparse.urlsplit(url).query)
+                #print paras
+                if "q" in paras:
+                    q_filed = paras["q"][0]
+                    query_string = ""
+                    mqs = re.search("^Id:\d+\+?$", q_filed)
+
+                    #skip only doc id query
+                    if mqs is not None:
+                        continue
+
+                    mqs = re.search("(Id:(\d+)\+?)?(\S+)",q_filed)
+                    if mqs is not None:
+                        query_string =  mqs.group(3) 
+                        if("relevent" in paras):
                             print "a relevance judgement"
-                        else:
-                            print "strange query with docid"
-                            print line
-                            raw_input("press enter to continue")
+                            if paras["relevent"][0].lower() == "true":
+                                print "relevant!"
+                            else:
+                                print "non-relevant"
+                        if mqs.group(1) is not None:
+                            if "mlt" in paras:
+                                print "a click"
+                                print "doc id", mqs.group(2)
+                             
+                            else:
+                                print "strange query with docid"
+                                print line
+                                raw_input("press enter to continue")
+                    raw_input("press enter to continue")
 
                 #if "mlt=true" in q_filed:
                 #
@@ -73,7 +73,7 @@ def read_log(log_file, session_threshold):
                 #else:
 
                 
-                raw_input("press enter to continue")
+                
             else:
                 print "error line!"
                 print line
