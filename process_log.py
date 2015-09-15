@@ -7,8 +7,20 @@ import time
 import argparse
 import urllib,urlparse
 
+def store_record(record,logs):
+    if len(logs['queries']) == 0:
+        return
+    else:
+        for query in logs['queries']:
+            if query not in record:
+                record[query] = []
+            record[query] += logs['queries'][query]
+
+        return
+
 def read_log(log_file, session_threshold):
     logs = {}
+    record = {}
     with open(log_file) as f:
         for line in f:
             if "/solr/collection1/browse" not in line:
@@ -42,29 +54,64 @@ def read_log(log_file, session_threshold):
                     query_string = ""
                     mqs = re.search("^Id:\d+\+?$", q_filed)
 
+
                     #skip only doc id query
                     if mqs is not None:
                         continue
+                    if ip not in logs:
+                        logs[ip] = {}
+                        logs[ip]['prev_time'] = t 
+                        logs[ip]['queries'] = {}
+                    elif(t - logs[ip]['prev_time'])>= session_threshold:
+                        print "empty ip"
+                        store_record(record,logs[ip])
+                        logs[ip] = {}
+                        logs[ip]['prev_time'] = t 
+                        logs[ip]['queries'] = {}
 
-                    mqs = re.search("(Id:(\d+)\+?)?(\S+)",q_filed)
+                    mqs = re.search("(Id:(\d+) ?)?(.+)",q_filed)
                     if mqs is not None:
-                        query_string =  mqs.group(3) 
+                        query_string =  mqs.group(3)
+                        #print "original query %s with length %d" %(query_string, len(query_string))
+
+
                         if("relevent" in paras):
                             print "a relevance judgement"
+                            judgement = "true"
                             if paras["relevent"][0].lower() == "true":
                                 print "relevant!"
                             else:
+                                judgement = "false"
                                 print "non-relevant"
+                            if len(logs[ip]['queries'][query_string])==1:
+                                logs[ip]['queries'][query_string][0]["relevance"] = judgement
+                            else:
+                                print "more than one document clicked, discard the judgement"
                         if mqs.group(1) is not None:
                             if "mlt" in paras:
                                 print "a click"
                                 print "doc id", mqs.group(2)
+                                if query_string not in logs[ip]['queries']:
+                                    #print "insert query", query_string
+                                    #print "length",len(query_string)
+                                    logs[ip]['queries'][query_string] = []
+                                else:
+                                    logs[ip]['queries'][query_string][-1]["dur_time"] = t-logs[ip]['queries'][query_string][-1]["time"]
+                                    if logs[ip]['queries'][query_string][-1]["dur_time"] <0:
+                                        print "negative dur time!"
+                                        print logs[ip]
+                                single = {}
+                                single["time"] = t
+                                single["docid"] =  mqs.group(2)
+                                single["dur_time"] = 0
+                                single["ip"] = ip
+                                single["relevance"] = "NA"
+
+                                logs[ip]['queries'][query_string].append(single)
+
                              
-                            else:
-                                print "strange query with docid"
-                                print line
-                                raw_input("press enter to continue")
-                    raw_input("press enter to continue")
+                            
+                    #raw_input("press enter to continue")
 
                 #if "mlt=true" in q_filed:
                 #
@@ -78,6 +125,9 @@ def read_log(log_file, session_threshold):
                 print "error line!"
                 print line
             #raw_input("press enter to continue")
+    for ip in logs:
+        store_record(record,logs[ip])
+    print record
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
