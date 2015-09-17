@@ -21,6 +21,8 @@ def store_record(record,logs):
 def read_log(log_file, session_threshold):
     logs = {}
     record = {}
+    catched = 0
+    ignore = 0
     with open(log_file) as f:
         for line in f:
             if "/solr/collection1/browse" not in line:
@@ -85,8 +87,10 @@ def read_log(log_file, session_threshold):
                                 print "non-relevant"
                             if len(logs[ip]['queries'][query_string])==1:
                                 logs[ip]['queries'][query_string][0]["relevance"] = judgement
+                                catched += 1
                             else:
                                 print "more than one document clicked, discard the judgement"
+                                ignore +=1
                         if mqs.group(1) is not None:
                             if "mlt" in paras:
                                 print "a click"
@@ -103,13 +107,15 @@ def read_log(log_file, session_threshold):
                                 single = {}
                                 single["time"] = t
                                 single["docid"] =  mqs.group(2)
-                                single["dur_time"] = 0
+                                single["dur_time"] = -1
                                 single["ip"] = ip
                                 single["relevance"] = "NA"
 
                                 logs[ip]['queries'][query_string].append(single)
 
-                             
+                            #else:
+                            #    print "strnage sentence with doc id"
+                            #    print line
                             
                     #raw_input("press enter to continue")
 
@@ -128,6 +134,7 @@ def read_log(log_file, session_threshold):
     for ip in logs:
         store_record(record,logs[ip])
     print record
+    print "catched %d, ignore %d" %(catched,ignore)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
